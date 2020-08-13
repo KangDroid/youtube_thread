@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <cstring>
+#include <fstream>
 #include <queue>
 #include <unistd.h>
 #include <cpprest/http_client.h>
@@ -49,6 +50,11 @@ int main(int argc, char** argv) {
                 return -1;
             }
             apikey = string(argv[i]);
+            ifstream tmp_file(apikey);
+            if (tmp_file.is_open()) {
+                // Meaning input was file path
+                getline(tmp_file, apikey);
+            }
         } else if (!strcmp(argv[i], "--play")) {
             if (i < argc - 1) {
                 i++;
