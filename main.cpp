@@ -62,6 +62,10 @@ int main(int argc, char** argv) {
                 cout << "--play is specified but no value entered" << endl;
             }
             p_id = string(argv[i]);
+            if (p_id.find("https://www.youtube.com/playlist?list=") != string::npos) {
+                int location = p_id.find("watch?v=");
+                p_id = p_id.substr(location+39, p_id.length());
+            }
         }
     }
     string token = "";
