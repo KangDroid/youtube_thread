@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
             }
             p_id = string(argv[i]);
             if (p_id.find("https://www.youtube.com/playlist?list=") != string::npos) {
-                int location = p_id.find("watch?v=");
-                p_id = p_id.substr(location+39, p_id.length());
+                int location = p_id.find("https://www.youtube.com/playlist?list=");
+                p_id = p_id.substr(location+38, p_id.length());
             }
         }
     }
