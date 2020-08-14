@@ -24,7 +24,7 @@ uri_builder create_uri(string playlist_id, string apikey, string token = "") {
 }
 
 string create_command(string video_id) {
-    string base = "youtube-dl -x --audio-format \"mp3\" https://www.youtube.com/watch?v=";
+    string base = "youtube-dl -x --audio-format \"mp3\" --output \'%(title)s.%(ext)s\' https://www.youtube.com/watch?v=";
     return (base+video_id);
 }
 
