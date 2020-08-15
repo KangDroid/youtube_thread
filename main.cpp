@@ -24,7 +24,7 @@ uri_builder create_uri(string playlist_id, string apikey, string token = "") {
 }
 
 string create_command(string video_id, string extra_args) {
-    string base = "youtube-dl " + extra_args + " --output \'%(title)s.%(ext)s\' https://www.youtube.com/watch?v=";
+    string base = "youtube-dl " + extra_args + " https://www.youtube.com/watch?v=";
     return (base+video_id);
 }
 
@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
     string apikey;
     string p_id;
     string extra_args = ""; // An argument for youtube-dl
+    bool keep_filename = false;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--apikey")) {
             if (i < argc - 1) {
@@ -67,9 +68,14 @@ int main(int argc, char** argv) {
                 int location = p_id.find("https://www.youtube.com/playlist?list=");
                 p_id = p_id.substr(location+38, p_id.length());
             }
+        } else if (!strcmp(argv[i], "--keep-filename")) {
+            keep_filename = true;
         } else {
             extra_args += string(argv[i]) + " ";
         }
+    }
+    if (keep_filename == false) {
+        extra_args += "--output \'%(title)s.%(ext)s\'";
     }
     string token = "";
     http_request request_tpr (methods::GET);
