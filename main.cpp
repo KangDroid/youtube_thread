@@ -23,8 +23,8 @@ uri_builder create_uri(string playlist_id, string apikey, string token = "") {
     return uri;
 }
 
-string create_command(string video_id) {
-    string base = "youtube-dl -x --audio-format \"mp3\" --output \'%(title)s.%(ext)s\' https://www.youtube.com/watch?v=";
+string create_command(string video_id, string extra_args) {
+    string base = "youtube-dl " + extra_args + " --output \'%(title)s.%(ext)s\' https://www.youtube.com/watch?v=";
     return (base+video_id);
 }
 
@@ -41,7 +41,8 @@ int main(int argc, char** argv) {
     const int thread_count = std::thread::hardware_concurrency();
     string apikey;
     string p_id;
-    for (int i = 0; i < argc; i++) {
+    string extra_args = ""; // An argument for youtube-dl
+    for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--apikey")) {
             if (i < argc - 1) {
                 i++;
@@ -66,6 +67,8 @@ int main(int argc, char** argv) {
                 int location = p_id.find("https://www.youtube.com/playlist?list=");
                 p_id = p_id.substr(location+38, p_id.length());
             }
+        } else {
+            extra_args += string(argv[i]) + " ";
         }
     }
     string token = "";
@@ -87,7 +90,7 @@ int main(int argc, char** argv) {
         int item_size = root_value["items"].size();
         for (int i = 0; i < item_size; i++) {
             count = count % thread_count;
-            queue_for_run[count++].push(create_command(root_value["items"][i]["snippet"]["resourceId"]["videoId"].as_string()));
+            queue_for_run[count++].push(create_command(root_value["items"][i]["snippet"]["resourceId"]["videoId"].as_string(), extra_args));
         }
         if (!root_value["nextPageToken"].is_null()) {
             token = root_value["nextPageToken"].as_string();
