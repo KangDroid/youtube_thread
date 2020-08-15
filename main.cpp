@@ -5,10 +5,14 @@
 #include <queue>
 #include <unistd.h>
 #include <cpprest/http_client.h>
+#include <pthread.h>
 
 using namespace std;
 using namespace web::http;
 using namespace web::http::client;
+
+pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
+bool save_output = false;
 
 uri_builder create_uri(string playlist_id, string apikey, string token = "") {
     uri_builder uri;
@@ -25,15 +29,36 @@ uri_builder create_uri(string playlist_id, string apikey, string token = "") {
 
 string create_command(string video_id, string extra_args) {
     string base = "youtube-dl " + extra_args + " https://www.youtube.com/watch?v=";
-    return (base+video_id);
+    return (base+video_id) + " > " + video_id + ".txt";
 }
 
-void download_function(queue<string>* container) {
+string get_id_command(string& command) {
+    return command.substr(command.length() - 15, command.length());
+}
+
+void download_function(queue<string>* container, queue<string>* debug_output) {
     int size = container->size();
+    FILE* f_tmp;
     for (int i = 0; i < size; i++) {
         string tmp = container->front(); container->pop();
-        // cout << tmp << endl;
-        system(tmp.c_str());
+        f_tmp = popen(tmp.c_str(), "r");
+        pclose(f_tmp);
+        std::remove(get_id_command(tmp).c_str());
+        if (save_output) {
+            ifstream ifs(get_id_command(tmp));
+            if (!ifs.is_open()) {
+                cout << "File not opened" << endl;
+                continue;
+            }
+            string buffer;
+            string output = "";
+            while (getline(ifs, buffer)) {
+                output += buffer;
+            }
+            pthread_mutex_lock(&a_mutex);
+            debug_output->push(output);
+            pthread_mutex_unlock(&a_mutex);
+        }
     }
 }
 
@@ -43,6 +68,8 @@ int main(int argc, char** argv) {
     string p_id;
     string extra_args = ""; // An argument for youtube-dl
     bool keep_filename = false;
+    thread thread_arr[thread_count];
+    queue<string> for_output;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--apikey")) {
             if (i < argc - 1) {
@@ -70,6 +97,8 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[i], "--keep-filename")) {
             keep_filename = true;
+        } else if (!strcmp(argv[i], "--verbose")) {
+            save_output = true;
         } else {
             extra_args += string(argv[i]) + " ";
         }
@@ -111,15 +140,29 @@ int main(int argc, char** argv) {
     // }
     // cout << sum << endl;
     for (int i = 0; i < thread_count; i++) {
-        pid_t t_f = fork();
-        if (t_f == 0) {
-            cout << "Working for " << i << endl;
-            download_function(&queue_for_run[i]);
-            //sleep(5);
-            exit(0);
-        }
+        thread_arr[i] = thread(download_function, &queue_for_run[i], &for_output);
     }
-    for(int i=0;i<thread_count;i++)
-        wait(NULL); 
+
+    for (int i = 0; i < thread_count; i++) {
+        thread_arr[i].join();
+    }
+
+    // Post work
+    for (int i = 0; i < for_output.size(); i++) {
+        cout << for_output.front() << endl;
+        for_output.pop();
+    }
+
+    // for (int i = 0; i < thread_count; i++) {
+    //     pid_t t_f = fork();
+    //     if (t_f == 0) {
+    //         cout << "Working for " << i << endl;
+    //         download_function(&queue_for_run[i]);
+    //         //sleep(5);
+    //         exit(0);
+    //     }
+    // }
+    // for(int i=0;i<thread_count;i++)
+    //     wait(NULL); 
     return 0;
 }
